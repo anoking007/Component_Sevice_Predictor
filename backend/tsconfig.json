@@ -5,6 +5,7 @@
     "typeRoots": ["node_modules/@types", "path/to/your/custom/types"],
     "module": "commonjs",
     "declaration": true,
+    "skipLibCheck": true, 
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,

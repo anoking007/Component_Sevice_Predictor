@@ -1,14 +1,17 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { PdfService } from './pdf.service';
+import { Response, Request } from 'express';
 
 @Controller('pdf')
+@UseGuards(JwtAuthGuard)
 export class PdfController {
   constructor(private readonly pdfService: PdfService) {}
 
   @Get('generate')
-  generatePdf(@Res() res: Response) {
-    const data = { title: 'Test PDF', content: 'This is a test PDF document.' };
-    return this.pdfService.generatePdf(data, res);
+  async generatePdf(@Req() req: Request, @Res() res: Response) {
+    
+    const user = req.user;
+    await this.pdfService.generatePdf(user, res);
   }
 }

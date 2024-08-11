@@ -2,13 +2,11 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, TimeSeriesSplit
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import LSTM, Dense, Dropout # type: ignore
+from tensorflow.keras.models import Sequential 
+from tensorflow.keras.layers import LSTM, Dense, Dropout 
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 import tensorflow as tf
-
-
 
 
 def prepare_data(data, look_back=30):
@@ -23,13 +21,13 @@ def prepare_data(data, look_back=30):
     pivot_data.columns = [f'{col[0]}_{col[1]}' for col in pivot_data.columns]
     
     # Check for NaN values
-    print("Columns with NaN values:", pivot_data.columns[pivot_data.isna().any()].tolist())
-    print("NaN count before handling:", pivot_data.isna().sum().sum())
+    #print("Columns with NaN values:", pivot_data.columns[pivot_data.isna().any()].tolist())
+    #print("NaN count before handling:", pivot_data.isna().sum().sum())8?
     
     # Fill NaN values
     pivot_data = pivot_data.fillna(method='ffill').fillna(method='bfill')
     
-    print("NaN count after handling:", pivot_data.isna().sum().sum())
+    #print("NaN count after handling:", pivot_data.isna().sum().sum())
     
     # Select relevant columns
     relevant_columns = ['Engine_Speed', 'Engine_Oil Pressure', 'Engine_Temparature',
@@ -41,8 +39,8 @@ def prepare_data(data, look_back=30):
     
     # Handle any remaining NaN values
     if pivot_data.isna().sum().sum() > 0:
-        print("Warning: There are still NaN values in the data.")
-        print(pivot_data.isna().sum())
+        #print("Warning: There are still NaN values in the data.")
+        #print(pivot_data.isna().sum())
         pivot_data = pivot_data.dropna()
     
     # Normalize data
@@ -58,7 +56,7 @@ def prepare_data(data, look_back=30):
     return np.array(X), np.array(y), scaler, pivot_data.columns
 
 
-def predict_breakdown(model, last_sequence, scaler, thresholds, column_names, days_to_predict=30):
+def predict_breakdown(model, last_sequence, scaler, thresholds, column_names, days_to_predict=30, output_file="breakdown_predictions.txt"):
     predictions = []
     d = []
     col1 = []
@@ -67,26 +65,30 @@ def predict_breakdown(model, last_sequence, scaler, thresholds, column_names, da
     for _ in range(days_to_predict):
         prediction = model.predict(current_sequence.reshape(1, current_sequence.shape[0], current_sequence.shape[1]))
         for i in prediction:
-          predictions.append(i)
+            predictions.append(i)
         current_sequence = np.roll(current_sequence, -1, axis=0)
         current_sequence[-1] = prediction
 
     predictions = scaler.inverse_transform(np.array(predictions))
-
     breakdown_occurred = False
 
+    with open(output_file, "w") as f:  # Open the file in write mode
+        for day, prediction in enumerate(predictions):
+            if breakdown_occurred:
+                break
+            for i, col in enumerate(column_names):
+                if col in thresholds:
+                    low, high = thresholds[col]
+                    if prediction[i] < low or prediction[i] >= high:
+                        output = f"Potential breakdown on day {day+3} due to {col}: {prediction[i]}"
+                        print(output)
+                        f.write(output + "\n")  # Write the output to the file
+                        pred = prediction[i]
+                        breakdown_occurred = True
+                        return day, pred
 
-    for day, prediction in enumerate(predictions):
-        if breakdown_occurred:
-            break
-        for i, col in enumerate(column_names):
-            if col in thresholds:
-                low, high = thresholds[col]
-                if prediction[i] < low or prediction[i] >= high:
-                    print(f"Potential breakdown on day {day+3} due to {col}: {prediction[i]}")
-                    pred = prediction[i]
-                    breakdown_occurred = True
-                    return day, pred
+    return None, None
+
     
 
 def create_model(input_shape):
@@ -116,17 +118,17 @@ def train_and_evaluate_model(X, y):
     train_mae = mean_absolute_error(y_train, train_predictions)
     test_mae = mean_absolute_error(y_test, test_predictions)
 
-    print(f"Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}")
-    print(f"Train MAE: {train_mae:.4f}, Test MAE: {test_mae:.4f}")
+    #print(f"Train MSE: {train_mse:.4f}, Test MSE: {test_mse:.4f}")
+    #print(f"Train MAE: {train_mae:.4f}, Test MAE: {test_mae:.4f}")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(history.history['loss'], label='Training Loss')
-    plt.plot(history.history['val_loss'], label='Validation Loss')
-    plt.title('Model Loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend()
-    plt.show()
+    #plt.figure(figsize=(10, 6))
+    #plt.plot(history.history['loss'], label='Training Loss')
+    #plt.plot(history.history['val_loss'], label='Validation Loss')
+    #plt.title('Model Loss')
+    #plt.ylabel('Loss')
+    #plt.xlabel('Epoch')
+    #plt.legend()
+    #plt.show()
 
     return model,test_predictions
 
@@ -144,8 +146,8 @@ def perform_cross_validation(X, y, n_splits=5):
         score = model.evaluate(X_test, y_test, verbose=0)
         cv_scores.append(score)
 
-    print(f"Cross-validation scores: {cv_scores}")
-    print(f"Mean CV score: {np.mean(cv_scores):.4f}")
+    #print(f"Cross-validation scores: {cv_scores}")
+    #print(f"Mean CV score: {np.mean(cv_scores):.4f}")
 
 def sensitivity_analysis(model, X, scaler, thresholds, column_names):
     sensitivity = {}
@@ -167,8 +169,8 @@ def check_feature_scaling(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(numerical_data)
 
-    print("Scaled Data Statistics:")
-    print(pd.DataFrame(scaled_data, columns=numerical_data.columns).describe())
+    #print("Scaled Data Statistics:")
+    #print(pd.DataFrame(scaled_data, columns=numerical_data.columns).describe())
 
 
 data = pd.read_excel('truck.xlsx')
@@ -192,14 +194,13 @@ print(df)
 
 X, y, scaler, column_names = prepare_data(data)
 
-print("X shape:", X.shape)
-print("y shape:", y.shape)
+#print("X shape:", X.shape)
+#print("y shape:", y.shape)
 
-print("NaN in X:", np.isnan(X).any())
-print("NaN in y:", np.isnan(y).any())
+#print("NaN in X:", np.isnan(X).any())
+#print("NaN in y:", np.isnan(y).any())
 
-if np.isnan(X).any() or np.isnan(y).any():
-    print("Warning: There are still NaN values in X or y.")
+
 
 model,test_predictions = train_and_evaluate_model(X, y)
 
@@ -228,4 +229,4 @@ check_feature_scaling(data)
 # Predict breakdown
 last_sequence = X[-1]
 
-days_until_breakdown, failing_parameter = predict_breakdown(model, last_sequence, scaler, thresholds, column_names)
+days_until_breakdown, failing_parameter = predict_breakdown(model, last_sequence, scaler, thresholds, column_names, output_file="predictions.txt")
